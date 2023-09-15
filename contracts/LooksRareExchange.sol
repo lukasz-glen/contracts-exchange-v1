@@ -6,7 +6,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
-import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
 // LooksRare interfaces
 import {ICurrencyManager} from "./interfaces/ICurrencyManager.sol";
@@ -21,6 +20,7 @@ import {IWETH} from "./interfaces/IWETH.sol";
 // LooksRare libraries
 import {OrderTypes} from "./libraries/OrderTypes.sol";
 import {SignatureChecker} from "./libraries/SignatureChecker.sol";
+import {ContextStorage} from "./metatx/ContextStorage.sol";
 
 /**
  * @title LooksRareExchange
@@ -59,7 +59,7 @@ LOOKSRARELOOKSRARELOOKSRLOOKSRARELOOKSRo'        'oLOOKSRARELOOKSRLOOKSRARELOOKS
 LOOKSRARELOOKSRARELOOKSRLOOKSRARELOOKSRARE,.  .,dRELOOKSRARELOOKSRLOOKSRARELOOKSRARELOOKSR
 LOOKSRARELOOKSRARELOOKSRLOOKSRARELOOKSRARELOOKSRARELOOKSRARELOOKSRLOOKSRARELOOKSRARELOOKSR
  */
-contract LooksRareExchange is ILooksRareExchange, ReentrancyGuard, Ownable, ERC2771Context {
+contract LooksRareExchange is ILooksRareExchange, ReentrancyGuard, Ownable, ContextStorage {
     using SafeERC20 for IERC20;
 
     using OrderTypes for OrderTypes.MakerOrder;
@@ -136,9 +136,8 @@ contract LooksRareExchange is ILooksRareExchange, ReentrancyGuard, Ownable, ERC2
         address _executionManager,
         address _royaltyFeeManager,
         address _WETH,
-        address _protocolFeeRecipient,
-        address _trustedForwarder
-    ) ERC2771Context(_trustedForwarder) {
+        address _protocolFeeRecipient
+    ) {
         // Calculate the domain separator
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
@@ -628,11 +627,19 @@ contract LooksRareExchange is ILooksRareExchange, ReentrancyGuard, Ownable, ERC2
         require(executionManager.isStrategyWhitelisted(makerOrder.strategy), "Strategy: Not whitelisted");
     }
 
-    function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) {
-        return ERC2771Context._msgData();
+    function lockTrustedForwarders() external onlyOwner {
+        _lockTrustedForwarders();
     }
 
-    function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address sender) {
-        return ERC2771Context._msgSender();
+    function setTrustedForwarder(address forwarder, bool active) external onlyOwner {
+        _setTrustedForwarder(forwarder, active);
+    }
+
+    function _msgData() internal view virtual override(ContextStorage, Context) returns (bytes calldata) {
+        return ContextStorage._msgData();
+    }
+
+    function _msgSender() internal view virtual override(ContextStorage, Context) returns (address) {
+        return ContextStorage._msgSender();
     }
 }

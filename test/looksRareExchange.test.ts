@@ -97,6 +97,9 @@ describe("LooksRare Exchange", () => {
     // Set up defaults startTime/endTime (for orders)
     startTimeOrder = BigNumber.from((await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp);
     endTimeOrder = startTimeOrder.add(BigNumber.from("1000"));
+
+    // Set up default forwarder
+    await looksRareExchange.connect(admin).setTrustedForwarder(minimalForwarder.address, true);
   });
 
   describe("#1 - Regular sales", async () => {
@@ -2871,6 +2874,37 @@ describe("LooksRare Exchange", () => {
       tx = await executionManager.viewWhitelistedStrategies("2", "100");
       assert.equal(tx[0].length, 4);
       assert.deepEqual(BigNumber.from(tx[1].toString()), BigNumber.from(numberStrategies.toString()));
+    });
+  });
+
+  describe("#8 - Forwarders management", async () => {
+    beforeEach(async () => {
+      // Unset for tests
+      await looksRareExchange.connect(admin).setTrustedForwarder(minimalForwarder.address, false);
+    });
+
+    it("Should change a trusted forwarder by the owner", async () => {
+      assert.isFalse(await looksRareExchange.isTrustedForwarder(minimalForwarder.address));
+      await looksRareExchange.connect(admin).setTrustedForwarder(minimalForwarder.address, true);
+      assert.isTrue(await looksRareExchange.isTrustedForwarder(minimalForwarder.address));
+    });
+
+    it("Should not change a trusted forwarder by non owner", async () => {
+      const tx = looksRareExchange.connect(accounts[1]).setTrustedForwarder(minimalForwarder.address, true);
+      // it works with prefixes
+      await expect(tx).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("Should lock by the owner", async () => {
+      assert.isFalse(await looksRareExchange.trustedForwardersLocked());
+      await looksRareExchange.connect(admin).lockTrustedForwarders();
+      assert.isTrue(await looksRareExchange.trustedForwardersLocked());
+    });
+
+    it("Should not lock by non owner", async () => {
+      const tx = looksRareExchange.connect(accounts[1]).lockTrustedForwarders();
+      // it works with prefixes
+      await expect(tx).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 });

@@ -103,8 +103,7 @@ export async function setUp(
     executionManager.address,
     royaltyFeeManager.address,
     weth.address,
-    feeRecipient.address,
-    minimalForwarder.address
+    feeRecipient.address
   );
   await looksRareExchange.deployed();
 
